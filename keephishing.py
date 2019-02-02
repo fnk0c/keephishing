@@ -28,12 +28,13 @@ from urllib.request import urlopen, Request
 from urllib.error import URLError
 from datetime import datetime
 from mysql import connector
-from config import *
+from config import MYSQL_USER, MYSQL_PASSWD, DATABASE, TABLE
 
 def GetSource(url):
     try:
         header = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36"}
-        html = urlopen(Request(url, headers=header)).read().decode("utf-8")#"cp1252"
+#        html = urlopen(Request(url, headers=header)).read().decode("utf-8")
+        html = urlopen(url).read().decode("utf-8")
         return("online", html)
     except Exception:
         return("offline", "NULL")
@@ -41,8 +42,8 @@ def GetSource(url):
 class ConnectMysql():
     def __init__(self):
         self.cnx = connector.connect(
-                user=USER,
-                password=PASSWD,
+                user=MYSQL_USER,
+                password=MYSQL_PASSWD,
                 database=DATABASE)
         self.cursor = self.cnx.cursor()
 
@@ -121,8 +122,8 @@ class ConnectMysql():
         self.cnx.close()
 
 def InsertSite():  
-    client = input("Cliente:\n >> ")
-    url = input("Informe o site a ser monitorado:\n >> ")
+    client = input("Client:\n >> ")
+    url = input("Inform website to be added in watchlist:\n >> ")
 
     if "http" not in url:
         url = "http://" + url
@@ -132,42 +133,43 @@ def InsertSite():
     status = website_rsp[0]
     source = website_rsp[1]
  
-    print("Resumo:")
-    print("Cliente: ", client)
-    print("Site: ", url)
+    print("Summary:")
+    print("Client: ", client)
+    print("Website: ", url)
     print("Status: ", status)
     
     if source != None: 
         print("Source: ", source[:100])
 
 
-    confirm = input("Confirmar? [y/N]\n >> ").lower()
+    confirm = input("Confirm? [y/N]\n >> ").lower()
 
     if confirm == "y":
         ConnectMysql().insert(client, status, url, today_date, source)
     else:
-        print(" [-] Abortado")
+        print(" [-] Aborted")
         Main()
 
 def DeleteSite():
-    url = input("Informe o site a ser removido:\n >> ")
+    url = input("Inform website to be removed:\n >> ")
     ConnectMysql().remove(url)
 
 def ConsultarSites():
-    print("""Pesquisar no Banco de dados
- [1] Por cliente
- [2] Por data
- [3] Por site
- [4] Listar todos
+    print("""Search in database
+ [1] By client
+ [2] By date
+ [3] By website
+ [4] List all
 
- [0] Voltar
+ [0] Go back
     """)
     option = int(input(" >> "))
+
     if option == 1:
-        client = input("Cliente:\n >> ")
+        client = input("Client:\n >> ")
         response = ConnectMysql().lookup("client", client)
     elif option == 2:
-        date = input("Data [yyyy-mm-dd]:\n >> ")
+        date = input("Date [yyyy-mm-dd]:\n >> ")
         response = ConnectMysql().lookup("date", date)
     elif option == 3:
         url = input("URL:\n >> ")
@@ -177,7 +179,7 @@ def ConsultarSites():
     elif option == 0:
         Main()
     else:
-        print(" [!] Opção não reconhecida")
+        print(" [!] Option not recognized")
         ConsultarSites()
 
     for item in response:
@@ -185,26 +187,26 @@ def ConsultarSites():
 
 def MainMenu():
     print("""
- [1] - Cadastrar clientes
- [2] - Consultar sites
- [3] - Remover site
+ [1] - Insert website
+ [2] - Retrieve websites
+ [3] - Remove website
 
- [0] - Sair
+ [0] - Exit
  """)
-    return(int(input(" >> ")))
+    return(input(" >> "))
 
 def Main():
     option = MainMenu()
-    if option == 1:
-        InsertSite()
-    elif option == 2:
-        ConsultarSites()
-    elif option == 3:
-       DeleteSite() 
-    elif option == 0:
-        exit()
-    else:
-        print("[!] Opção não reconhecida")
+    functions = {
+    "0": "exit()",
+    "1": "InsertSite()",
+    "2": "ConsultarSites()",
+    "3": "DeleteSite()"
+    }
+    try:
+        exec(functions[option])
+    except KeyError:
+        print(" [!] Option not recognized")
         Main()
 
 if __name__ == "__main__":
